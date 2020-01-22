@@ -29,14 +29,19 @@ end
 def run_cleanup(r)
   go_to_profile(r)
 
-  # 1 check if email needs to change
-  # 2 set temp pazwrd
-  # 3 reset MFA
-  # 4 change OU to Taiwan
-  # 5 update first name last name
-  # 6 add aliases"
+
+  update_name_and_email(r)
+
+  set_password(r)
+
+  reset_mfa
+
+  change_group
+
+  add_alias(r)
 end
 
+# done
 def go_to_profile(r)
   @browser.navigate.to "https://thekey.me/cas-management/users/admin"
   element = @browser.find_element(css: 'input#email')
@@ -48,8 +53,32 @@ def go_to_profile(r)
   find_button(@browser, 'Edit').click
 end
 
+# done
 def check_for_multiple_results
-  
+  count = @browser.find_elements(class: "main-row").count
+  if count > 1
+    raise "more than 1 result"
+  end
+end
+
+def update_name_and_email(row)
+
+end
+
+def set_password(row)
+
+end
+
+def reset_mfa
+
+end
+
+def change_group
+
+end
+
+def add_alias(row)
+
 end
 
 def run
