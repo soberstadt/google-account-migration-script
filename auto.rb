@@ -2,6 +2,7 @@ require "selenium-webdriver"
 
 require '~/key_login.rb'
 require_relative 'helpers.rb'
+require 'google_drive'
 
 def setup_browser
   @browser = Selenium::WebDriver.for :chrome
@@ -15,7 +16,10 @@ end
 
 def connect_to_drive_file
   # how?
-  @file = nil
+  session = GoogleDrive::Session.from_config("config.json")
+  ws = session.spreadsheet_by_key("1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk").worksheets[0]
+  @file = ws
+  p ws.rows.first
 end
 
 def loop_over_rows(rows)
