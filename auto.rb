@@ -4,6 +4,9 @@ require '~/key_login.rb'
 require_relative 'helpers.rb'
 require 'google_drive'
 
+$change_email_allowed = true
+$dry_run = true
+
 def setup_browser
   @browser = Selenium::WebDriver.for :chrome
   @browser.navigate.to "https://thekey.me/cas-management/users/admin"
@@ -17,7 +20,7 @@ end
 def connect_to_drive_file
   # how?
   session = GoogleDrive::Session.from_config("config.json")
-  ws = session.spreadsheet_by_key("1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk").worksheets[0]
+  ws = session.spreadsheet_by_key("1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk").worksheets[1]
   @headers = ws.rows.first.map(&:strip)
   @file = ws
 end
@@ -29,8 +32,9 @@ end
 def run_cleanup(r)
   go_to_profile(r)
 
-
   update_name_and_email(r)
+
+  go_to_profile(r)
 
   set_password(r)
 
@@ -59,10 +63,35 @@ def check_for_multiple_results
   if count > 1
     raise "more than 1 result"
   end
+
+  if count == 0
+    raise "person not found"
+  end
 end
 
+# done
 def update_name_and_email(row)
+  first_name = row[4]
+  preferred_name = row[7]
+  last_name = row[5]
 
+  @browser.find_element(id: 'firstName').clear
+  @browser.find_element(id: 'firstName').send_keys(first_name)
+
+  if preferred_name != ''
+    @browser.find_element(id: 'preferredName').clear
+    @browser.find_element(id: 'preferredName').send_keys(preferred_name)
+  end
+
+  @browser.find_element(id: 'lastName').clear
+  @browser.find_element(id: 'lastName').send_keys(last_name)
+
+  if $change_email_allowed
+    @browser.find_element(id: 'email').clear
+    @browser.find_element(id: 'email').send_keys(row[2])
+  end
+
+  @browser.find_element(css: '[name="_eventId_save"]').click unless $dry_run
 end
 
 def set_password(row)
