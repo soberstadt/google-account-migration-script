@@ -18,15 +18,17 @@ def connect_to_drive_file
   # how?
   session = GoogleDrive::Session.from_config("config.json")
   ws = session.spreadsheet_by_key("1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk").worksheets[0]
+  @headers = ws.rows.first.map(&:strip)
   @file = ws
-  p ws.rows.first
 end
 
 def loop_over_rows(rows)
-  rows.each { |r| run_cleanup(r) }
+  rows[0..0].each { |r| run_cleanup(r) }
 end
 
 def run_cleanup(r)
+  go_to_profile(r)
+
   # 1 check if email needs to change
   # 2 set temp pazwrd
   # 3 reset MFA
@@ -35,14 +37,30 @@ def run_cleanup(r)
   # 6 add aliases"
 end
 
+def go_to_profile(r)
+  @browser.navigate.to "https://thekey.me/cas-management/users/admin"
+  element = @browser.find_element(css: 'input#email')
+  element.send_keys r[1]
+  find_button(@browser, 'Search').click
+
+  check_for_multiple_results
+
+  find_button(@browser, 'Edit').click
+end
+
+def check_for_multiple_results
+  
+end
+
 def run
   connect_to_drive_file
   setup_browser
-  loop_over_rows(@file.rows)
+  loop_over_rows(@file.rows[2..154])
 end
 
 begin
   run
+  sleep 10
 rescue StandardError => error
   p error
   sleep 20
