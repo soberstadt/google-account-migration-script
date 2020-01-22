@@ -91,15 +91,37 @@ def update_name_and_email(row)
     @browser.find_element(id: 'email').send_keys(row[2])
   end
 
-  @browser.find_element(css: '[name="_eventId_save"]').click unless $dry_run
+  return if $dry_run
+  @browser.find_element(css: '[name="_eventId_save"]').click
+  # wait a half second for page to save
+  sleep 0.5
 end
 
+# done
 def set_password(row)
+  @browser.find_element(css: '[data-target="#changePasswordCollapsible"]').click
+  @browser.find_element(id: 'password').clear
+  @browser.find_element(id: 'password').send_keys(row[3])
 
+  return if $dry_run
+  @browser.find_element(css: '[name="_eventId_updatePassword"]').click
+  # wait a half second for page to save
+  sleep 0.5
 end
 
+# done
 def reset_mfa
+  @browser.find_element(css: '[data-target="#mfaCollapsible"]').click
 
+  mfa_enabled = @browser.find_elements(css: '[name="_eventId_resetMfaSecret"]').count > 0
+  return unless mfa_enabled
+
+
+  return if $dry_run
+  sleep 0.5
+  @browser.find_element(css: '[name="_eventId_resetMfaSecret"]').click
+  # wait a half second for page to save
+  sleep 0.5
 end
 
 def change_group
@@ -118,6 +140,7 @@ end
 
 begin
   run
+  p 'success! 🎉'
   sleep 10
 rescue StandardError => error
   p error
