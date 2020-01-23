@@ -1,11 +1,13 @@
-require "selenium-webdriver"
+require 'selenium-webdriver'
+require 'google_drive'
+require 'pry'
 
 require '~/key_login.rb'
 require_relative 'helpers.rb'
-require 'google_drive'
 
 $change_email_allowed = true
 $dry_run = true
+$only_one = true
 
 def setup_browser
   @browser = Selenium::WebDriver.for :chrome
@@ -25,11 +27,21 @@ def connect_to_drive_file
   @file = ws
 end
 
-def loop_over_rows(rows)
-  rows[0..0].each { |r| run_cleanup(r) }
+def loop_over_rows
+  rows = @file.rows
+  rows.each_with_index do |r, index|
+    next if index == 0 || index == 1
+
+    run_cleanup(r, index)
+
+    break if $only_one
+
+    # stop looping if the next row doesn't have an email address
+    break if rows[index + 1][2] == ''
+  end
 end
 
-def run_cleanup(r)
+def run_cleanup(r, index)
   go_to_profile(r)
 
   update_name_and_email(r)
@@ -43,6 +55,10 @@ def run_cleanup(r)
   change_group
 
   add_alias(r)
+
+  save_note(index + 1, 'success')
+rescue => error
+  save_note(index + 1, error.message)
 end
 
 # done
@@ -132,16 +148,21 @@ def add_alias(row)
 
 end
 
+def save_note(row_number, text)
+  @file[row_number, 14] = text
+  @file.save
+end
+
 def run
   connect_to_drive_file
   setup_browser
-  loop_over_rows(@file.rows[2..154])
+  loop_over_rows
 end
 
 begin
   run
   p 'success! 🎉'
-  sleep 10
+  sleep 5
 rescue StandardError => error
   p error
   sleep 20
