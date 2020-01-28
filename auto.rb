@@ -2,10 +2,19 @@ require 'selenium-webdriver'
 require 'google_drive'
 require 'pry'
 
-require '~/key_login.rb'
+LOGIN_HELPER_FILE = '~/key_login.rb'
+SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
+SHEET_INDEX = 1
+G_GROUP_ID = 'googleGroup71'
+
+def login(_browser); end
+if File.file?(File.expand_path LOGIN_HELPER_FILE)
+  require LOGIN_HELPER_FILE
+end
+
 require_relative 'helpers.rb'
 
-$change_email_allowed = true
+$change_email_allowed = false
 $dry_run = true
 $only_one = true
 
@@ -22,7 +31,7 @@ end
 def connect_to_drive_file
   # how?
   session = GoogleDrive::Session.from_config("config.json")
-  ws = session.spreadsheet_by_key("1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk").worksheets[1]
+  ws = session.spreadsheet_by_key(SPREADSHEET_KEY).worksheets[SHEET_INDEX]
   @headers = ws.rows.first.map(&:strip)
   @file = ws
 end
@@ -141,7 +150,19 @@ def reset_mfa
 end
 
 def change_group
+  return unless G_GROUP_ID
 
+  @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
+
+  group_select = @browser.find_elements(id: G_GROUP_ID).first
+  return unless group_select
+  group_select.click
+
+  return if $dry_run
+  sleep 0.5
+  @browser.find_element(css: '[name="_eventId_updateGoogleGroup"]').click
+  # wait a half second for page to save
+  sleep 0.5
 end
 
 def add_alias(row)
