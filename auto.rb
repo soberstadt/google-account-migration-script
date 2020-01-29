@@ -5,7 +5,7 @@ require 'pry'
 LOGIN_HELPER_FILE = '~/key_login.rb'
 SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
 SHEET_INDEX = 1
-G_GROUP_ID = 'googleGroup71'
+G_GROUP_ID = 'googleGroup83'
 
 def login(_browser); end
 if File.file?(File.expand_path LOGIN_HELPER_FILE)
@@ -52,18 +52,18 @@ end
 
 def run_cleanup(r, index)
   go_to_profile(r)
-
   update_name_and_email(r)
 
   go_to_profile(r)
-
   set_password(r)
 
+  go_to_profile(r)
   reset_mfa
 
+  go_to_profile(r)
   change_group
 
-  add_alias(r)
+  add_alias(r) # currently does nothing
 
   save_note(index + 1, 'success')
 rescue => error
@@ -154,12 +154,12 @@ def change_group
 
   @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
 
+  sleep 0.5
   group_select = @browser.find_elements(id: G_GROUP_ID).first
   return unless group_select
   group_select.click
 
   return if $dry_run
-  sleep 0.5
   @browser.find_element(css: '[name="_eventId_updateGoogleGroup"]').click
   # wait a half second for page to save
   sleep 0.5
