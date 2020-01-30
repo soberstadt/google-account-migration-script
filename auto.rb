@@ -11,6 +11,8 @@ G_GROUP_NAME = 'Mail-Global-Taiwan'
 START_ROW_NUMBER=3
 END_ROW_NUMBER=154
 
+EXISTING_EMAIL_COLUMN_INDEX=10
+
 def login(_browser); end
 if File.file?(File.expand_path LOGIN_HELPER_FILE)
   require LOGIN_HELPER_FILE
@@ -51,9 +53,6 @@ end
 
 def run_cleanup(r, index)
   go_to_profile(r)
-  update_name_and_email(r)
-
-  go_to_profile(r)
   set_password(r)
 
   go_to_profile(r)
@@ -64,6 +63,9 @@ def run_cleanup(r, index)
 
   add_alias(r) # currently does nothing
 
+  go_to_profile(r)
+  update_name_and_email(r)
+
   save_note(index + START_ROW_NUMBER, 'success')
 rescue => error
   save_note(index + START_ROW_NUMBER, error.message)
@@ -71,9 +73,11 @@ end
 
 # done
 def go_to_profile(r)
+  raise "no email provided" if r[EXISTING_EMAIL_COLUMN_INDEX] == ''
+
   @browser.navigate.to "https://thekey.me/cas-management/users/admin"
   element = @browser.find_element(css: 'input#email')
-  element.send_keys r[1]
+  element.send_keys r[EXISTING_EMAIL_COLUMN_INDEX]
   find_button(@browser, 'Search').click
 
   check_for_multiple_results
