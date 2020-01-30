@@ -12,6 +12,11 @@ START_ROW_NUMBER=3
 END_ROW_NUMBER=154
 
 EXISTING_EMAIL_COLUMN_INDEX=10
+DESIRED_EMAIL_COLUMN_INDEX=2
+FIRST_NAME_COLUMN_INDEX=4
+PREFERRED_NAME_COLUMN_INDEX=7
+LAST_NAME_COLUMN_INDEX=5
+PASSWORD_COLUMN_INDEX=3
 
 def login(_browser); end
 if File.file?(File.expand_path LOGIN_HELPER_FILE)
@@ -99,9 +104,9 @@ end
 
 # done
 def update_name_and_email(row)
-  first_name = row[4]
-  preferred_name = row[7]
-  last_name = row[5]
+  first_name = row[FIRST_NAME_COLUMN_INDEX]
+  preferred_name = row[PREFERRED_NAME_COLUMN_INDEX]
+  last_name = row[LAST_NAME_COLUMN_INDEX]
 
   @browser.find_element(id: 'firstName').clear
   @browser.find_element(id: 'firstName').send_keys(first_name)
@@ -116,7 +121,7 @@ def update_name_and_email(row)
 
   if $change_email_allowed
     @browser.find_element(id: 'email').clear
-    @browser.find_element(id: 'email').send_keys(row[2])
+    @browser.find_element(id: 'email').send_keys(row[DESIRED_EMAIL_COLUMN_INDEX])
   end
 
   return if $dry_run
@@ -129,7 +134,7 @@ end
 def set_password(row)
   @browser.find_element(css: '[data-target="#changePasswordCollapsible"]').click
   @browser.find_element(id: 'password').clear
-  @browser.find_element(id: 'password').send_keys(row[3])
+  @browser.find_element(id: 'password').send_keys(row[PASSWORD_COLUMN_INDEX])
 
   return if $dry_run
   @browser.find_element(css: '[name="_eventId_updatePassword"]').click
