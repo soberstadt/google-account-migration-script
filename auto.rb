@@ -5,7 +5,7 @@ require 'pry'
 LOGIN_HELPER_FILE = '~/key_login.rb'
 SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
 SHEET_INDEX = 1
-G_GROUP_ID = 'googleGroup83'
+G_GROUP_NAME = 'Mail-Global-Taiwan'
 
 # use the actual row numbers (the first row is 1, not 0)
 START_ROW_NUMBER=3
@@ -149,12 +149,13 @@ def reset_mfa
 end
 
 def change_group
-  return unless G_GROUP_ID
+  return unless G_GROUP_NAME
 
   @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
 
   sleep 0.5
-  group_select = @browser.find_elements(id: G_GROUP_ID).first
+  xpath_selector = "//*[text() = '#{G_GROUP_NAME}']"
+  group_select = @browser.find_elements(xpath: xpath_selector).first
   return unless group_select
   group_select.click
 
