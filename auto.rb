@@ -7,6 +7,10 @@ SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
 SHEET_INDEX = 1
 G_GROUP_ID = 'googleGroup83'
 
+# use the actual row numbers (the first row is 1, not 0)
+START_ROW_NUMBER=3
+END_ROW_NUMBER=154
+
 def login(_browser); end
 if File.file?(File.expand_path LOGIN_HELPER_FILE)
   require LOGIN_HELPER_FILE
@@ -37,16 +41,11 @@ def connect_to_drive_file
 end
 
 def loop_over_rows
-  rows = @file.rows
+  rows = @file.rows[(START_ROW_NUMBER - 1)..(END_ROW_NUMBER - 1)]
   rows.each_with_index do |r, index|
-    next if index == 0 || index == 1
-
     run_cleanup(r, index)
 
     break if $only_one
-
-    # stop looping if the next row doesn't have an email address
-    break if rows[index + 1][2] == ''
   end
 end
 
@@ -65,9 +64,9 @@ def run_cleanup(r, index)
 
   add_alias(r) # currently does nothing
 
-  save_note(index + 1, 'success')
+  save_note(index + START_ROW_NUMBER, 'success')
 rescue => error
-  save_note(index + 1, error.message)
+  save_note(index + START_ROW_NUMBER, error.message)
 end
 
 # done
@@ -183,7 +182,7 @@ end
 begin
   run
   p 'success! 🎉'
-  sleep 5
+  sleep 1
 rescue StandardError => error
   p error
   sleep 20
