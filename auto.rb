@@ -58,20 +58,29 @@ def loop_over_rows
   end
 end
 
+# order from Scott on 2020-02-06
+# 1. Search on "K" change email to "C" (save)
+# 2 Search on "C" then change names (save)
+# 3 Search on "C" then Reset MFA
+# 4 change password (save)
+# 5 Search on "C" then change then change Google Organization, (wait)
 def run_cleanup(r, index)
   go_to_profile(r)
-  set_password(r)
+  update_email(r)
+  new_email = $change_email_allowed ? r[DESIRED_EMAIL_COLUMN_INDEX] : nil
 
-  go_to_profile(r)
+  go_to_profile(r, new_email)
+  update_name(r)
+
+  go_to_profile(r, new_email)
   reset_mfa
 
-  go_to_profile(r)
+  set_password(r)
+
+  # add_alias(r) # currently does nothing
+
+  go_to_profile(r, new_email)
   change_group
-
-  add_alias(r) # currently does nothing
-
-  go_to_profile(r)
-  update_name_and_email(r)
 
   save_note(index + START_ROW_NUMBER, 'success')
 rescue => error
@@ -107,7 +116,7 @@ def check_for_multiple_results
 end
 
 # done
-def update_name_and_email(row)
+def update_name(row)
   first_name = row[FIRST_NAME_COLUMN_INDEX]
   preferred_name = row[PREFERRED_NAME_COLUMN_INDEX]
   last_name = row[LAST_NAME_COLUMN_INDEX]
@@ -123,12 +132,21 @@ def update_name_and_email(row)
   @browser.find_element(id: 'lastName').clear
   @browser.find_element(id: 'lastName').send_keys(last_name)
 
-  if $change_email_allowed
-    @browser.find_element(id: 'email').clear
-    @browser.find_element(id: 'email').send_keys(row[DESIRED_EMAIL_COLUMN_INDEX])
-  end
+  return if $dry_run
+  @browser.find_element(css: '[name="_eventId_save"]').click
+  # wait a half second for page to save
+  sleep 0.5
+end
+
+# done
+def update_email(row)
+  return unless $change_email_allowed
+
+  @browser.find_element(id: 'email').clear
+  @browser.find_element(id: 'email').send_keys(row[DESIRED_EMAIL_COLUMN_INDEX])
 
   return if $dry_run
+
   @browser.find_element(css: '[name="_eventId_save"]').click
   # wait a half second for page to save
   sleep 0.5
@@ -164,18 +182,20 @@ end
 def change_group
   return unless G_GROUP_NAME
 
+  sleep 3
   @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
 
-  sleep 0.5
   xpath_selector = "//*[text() = '#{G_GROUP_NAME}']"
   group_select = @browser.find_elements(xpath: xpath_selector).first
   raise 'google group not found' unless group_select
   group_select.click
 
+  sleep 3
+
   return if $dry_run
   @browser.find_element(css: '[name="_eventId_updateGoogleGroup"]').click
   # wait a half second for page to save
-  sleep 0.5
+  sleep 3
 end
 
 def add_alias(row)
