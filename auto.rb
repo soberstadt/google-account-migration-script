@@ -77,12 +77,14 @@ rescue => error
 end
 
 # done
-def go_to_profile(r)
-  raise "no email provided" if r[EXISTING_EMAIL_COLUMN_INDEX] == ''
+def go_to_profile(r, email = nil)
+  email ||= r[EXISTING_EMAIL_COLUMN_INDEX]
+
+  raise "no email provided" if email == ''
 
   @browser.navigate.to "https://thekey.me/cas-management/users/admin"
   element = @browser.find_element(css: 'input#email')
-  element.send_keys r[EXISTING_EMAIL_COLUMN_INDEX]
+  element.send_keys email
   find_button(@browser, 'Search').click
 
   check_for_multiple_results
