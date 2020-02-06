@@ -1,1 +1,4 @@
 vendor/
+profile/
+.bundle/
+config.json

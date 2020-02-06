@@ -30,7 +30,9 @@ $dry_run = true
 $only_one = true
 
 def setup_browser
-  @browser = Selenium::WebDriver.for :chrome
+  options = Selenium::WebDriver::Chrome::Options.new
+  options.add_argument("user-data-dir=./profile")
+  @browser = Selenium::WebDriver.for :chrome, options: options
   @browser.navigate.to "https://thekey.me/cas-management/users/admin"
 
   login(@browser)
@@ -167,7 +169,7 @@ def change_group
   sleep 0.5
   xpath_selector = "//*[text() = '#{G_GROUP_NAME}']"
   group_select = @browser.find_elements(xpath: xpath_selector).first
-  return unless group_select
+  raise 'google group not found' unless group_select
   group_select.click
 
   return if $dry_run
