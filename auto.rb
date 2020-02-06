@@ -1,11 +1,11 @@
 require 'selenium-webdriver'
 require 'google_drive'
-require 'pry'
+require 'pry-byebug'
 
 LOGIN_HELPER_FILE = '~/key_login.rb'
 SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
 SHEET_INDEX = 1
-G_GROUP_NAME = 'Mail-Global-Taiwan'
+G_GROUP_NAME = 'Ghana'
 
 # use the actual row numbers (the first row is 1, not 0)
 START_ROW_NUMBER=3
