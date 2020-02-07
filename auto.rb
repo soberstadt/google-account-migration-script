@@ -118,7 +118,7 @@ end
 # done
 def update_name(row)
   first_name = row[FIRST_NAME_COLUMN_INDEX]
-  preferred_name = row[PREFERRED_NAME_COLUMN_INDEX]
+  preferred_name = PREFERRED_NAME_COLUMN_INDEX ? row[PREFERRED_NAME_COLUMN_INDEX] : ''
   last_name = row[LAST_NAME_COLUMN_INDEX]
 
   @browser.find_element(id: 'firstName').clear
@@ -182,20 +182,21 @@ end
 def change_group
   return unless G_GROUP_NAME
 
-  sleep 3
+  sleep 1
   @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
+  sleep 3
 
   xpath_selector = "//*[text() = '#{G_GROUP_NAME}']"
   group_select = @browser.find_elements(xpath: xpath_selector).first
   raise 'google group not found' unless group_select
   group_select.click
 
-  sleep 3
+  sleep 0.5
 
   return if $dry_run
   @browser.find_element(css: '[name="_eventId_updateGoogleGroup"]').click
   # wait a half second for page to save
-  sleep 3
+  sleep 0.5
 end
 
 def add_alias(row)
