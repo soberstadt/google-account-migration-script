@@ -2,14 +2,15 @@ require 'selenium-webdriver'
 require 'google_drive'
 require 'pry-byebug'
 
+CAS_MANAGE_SEARCH_PAGE = 'https://thekey.me/cas-management/users/admin'
 LOGIN_HELPER_FILE = '~/key_login.rb'
 SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
 SHEET_INDEX = 1
-G_GROUP_NAME = 'Ghana'
+G_GROUP_NAME = 'WA/Ghana'
 
 # use the actual row numbers (the first row is 1, not 0)
 START_ROW_NUMBER=3
-END_ROW_NUMBER=154
+END_ROW_NUMBER=4
 
 EXISTING_EMAIL_COLUMN_INDEX=10
 DESIRED_EMAIL_COLUMN_INDEX=2
@@ -65,7 +66,7 @@ end
 # 4 change password (save)
 # 5 Search on "C" then change then change Google Organization, (wait)
 def run_cleanup(r, index)
-  go_to_profile(r)
+  go_to_profile(r, nil, true)
   update_email(r)
   new_email = $change_email_allowed ? r[DESIRED_EMAIL_COLUMN_INDEX] : nil
 
@@ -88,19 +89,29 @@ rescue => error
 end
 
 # done
-def go_to_profile(r, email = nil)
+def go_to_profile(r, email = nil, reload = false)
   email ||= r[EXISTING_EMAIL_COLUMN_INDEX]
 
   raise "no email provided" if email == ''
 
-  @browser.navigate.to "https://thekey.me/cas-management/users/admin"
+  go_to_search_page(reload)
+
   element = @browser.find_element(css: 'input#email')
+  element.clear
   element.send_keys email
   find_button(@browser, 'Search').click
 
   check_for_multiple_results
 
   find_button(@browser, 'Edit').click
+end
+
+def go_to_search_page(reload)
+  h1 = @browser.find_element(css: 'h1')
+  return if !reload && h1.text == 'User Search' && h1.displayed?
+
+  @browser.navigate.to CAS_MANAGE_SEARCH_PAGE
+  @browser.find_element(css: '.card.mb-3 input#email')
 end
 
 # done
@@ -134,8 +145,9 @@ def update_name(row)
 
   return if $dry_run
   @browser.find_element(css: '[name="_eventId_save"]').click
-  # wait a half second for page to save
-  sleep 0.5
+  # wait for page to save
+  sleep 0.1
+  wait_for(css: '.card-header')
 end
 
 # done
@@ -148,8 +160,9 @@ def update_email(row)
   return if $dry_run
 
   @browser.find_element(css: '[name="_eventId_save"]').click
-  # wait a half second for page to save
-  sleep 0.5
+  # wait for page to save
+  sleep 0.1
+  wait_for(css: '.card-header')
 end
 
 # done
