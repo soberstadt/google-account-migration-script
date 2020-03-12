@@ -193,11 +193,11 @@ def reset_mfa
 end
 
 def change_group
-  return unless G_GROUP_NAME
+  return if [nil, ''].include? G_GROUP_NAME
 
   sleep 1
   @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
-  sleep 3
+  sleep 0.3
 
   xpath_selector = "//*[text() = '#{G_GROUP_NAME}']"
   group_select = @browser.find_elements(xpath: xpath_selector).first
