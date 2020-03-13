@@ -5,3 +5,7 @@ end
 def wait_for(search)
   @browser.find_element(search)
 end
+
+def char_to_col_index(char)
+  char.upcase.ord - 65
+end
