@@ -9,8 +9,8 @@ SHEET_INDEX = 1
 G_GROUP_NAME = 'WA/Ghana'
 
 # use the actual row numbers (the first row is 1, not 0)
-START_ROW_NUMBER=3
-END_ROW_NUMBER=4
+START_ROW_NUMBER = ENV['START_ROW_NUMBER']&.to_i || 3
+END_ROW_NUMBER = ENV['END_ROW_NUMBER']&.to_i || 4
 
 EXISTING_EMAIL_COLUMN_INDEX=10
 DESIRED_EMAIL_COLUMN_INDEX=2
@@ -32,7 +32,7 @@ $only_one = true
 
 def setup_browser
   options = Selenium::WebDriver::Chrome::Options.new
-  options.add_argument("user-data-dir=./profile")
+  options.add_argument(user_data_dir)
   @browser = Selenium::WebDriver.for :chrome, options: options
   @browser.navigate.to "https://thekey.me/cas-management/users/admin"
 
@@ -40,6 +40,11 @@ def setup_browser
 
   wait = Selenium::WebDriver::Wait.new(timeout: 200) # seconds
   wait.until { @browser.find_element(css: 'input#email') }
+end
+
+def user_data_dir
+  return "user-data-dir=./profile" unless ENV['PROFILE_NUMBER']
+  "user-data-dir=./profile-#{ENV['PROFILE_NUMBER']}"
 end
 
 def connect_to_drive_file
