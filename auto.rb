@@ -70,9 +70,10 @@ end
 # 3 Search on "C" then Reset MFA
 # 4 change password (save)
 # 5 Search on "C" then change then change Google Organization, (wait)
+# 6 Search on "C" then change aliases
 def run_cleanup(r, index)
-  go_to_profile(r, nil, true)
-  update_email(r)
+  found = safe_go_to_profile(r, nil, true)
+  update_email(r) if found
   new_email = $change_email_allowed ? r[DESIRED_EMAIL_COLUMN_INDEX] : nil
 
   go_to_profile(r, new_email)
@@ -83,14 +84,24 @@ def run_cleanup(r, index)
 
   set_password(r)
 
-  # add_alias(r) # currently does nothing
-
   go_to_profile(r, new_email)
-  change_group
+  change_group(r)
+
+  if ALIAS_COLUMN_INDEX
+    go_to_profile(r, new_email)
+    add_aliases(r) # currently does nothing
+  end
 
   save_note(index + START_ROW_NUMBER, 'success')
 rescue => error
   save_note(index + START_ROW_NUMBER, error.message)
+end
+
+def safe_go_to_profile(r, email = nil, reload = false)
+  go_to_profile(r, email, reload)
+rescue => error
+  raise error unless error.message == "person not found"
+  nil
 end
 
 # done
@@ -109,6 +120,7 @@ def go_to_profile(r, email = nil, reload = false)
   check_for_multiple_results
 
   find_button(@browser, 'Edit').click
+  true
 end
 
 def go_to_search_page(reload)
@@ -197,14 +209,14 @@ def reset_mfa
   sleep 0.5
 end
 
-def change_group
-  return if [nil, ''].include? G_GROUP_NAME
+def change_group(row)
+  return if [nil, ''].include? group_name(row)
 
   sleep 1
   @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
-  sleep 0.3
+  sleep 1
 
-  xpath_selector = "//*[text() = '#{G_GROUP_NAME}']"
+  xpath_selector = "//*[text() = '#{group_name(row)}']"
   group_select = @browser.find_elements(xpath: xpath_selector).first
   raise 'google group not found' unless group_select
   group_select.click
@@ -217,12 +229,39 @@ def change_group
   sleep 0.5
 end
 
-def add_alias(row)
+def group_name(row)
+  return if [nil, ''].include? G_GROUP_NAME
+  return G_GROUP_NAME if G_GROUP_NAME.is_a? String
 
+  group_name = row[G_GROUP_NAME]
+  return if [nil, ''].include? group_name
+  group_name
+end
+
+def add_aliases(row)
+  aliases = row[ALIAS_COLUMN_INDEX].to_s.strip.split(',').map(&:strip)
+  return unless aliases.any?
+
+  @browser.find_element(css: '.select2-selection').click
+  aliases.each do |a|
+    add_alias(a)
+  end
+
+  return if $dry_run
+  @browser.find_element(css: '[name="_eventId_save"]').click
+  # wait for page to save
+  sleep 0.1
+  wait_for(css: '.card-header')
+end
+
+def add_alias(a)
+  @browser.find_element(css: '.select2-search--inline input').send_keys(a)
+  @browser.find_element(css: '.select2-results__option--highlighted').click
+  sleep(0.1)
 end
 
 def save_note(row_number, text)
-  @file[row_number, 14] = text
+  @file[row_number, NOTE_COLUMN_INDEX + 1] = text
   @file.save
 end
 
@@ -234,7 +273,7 @@ end
 
 begin
   run
-  p 'success! 🎉'
+  p 'done! 🎉'
   sleep 1
 rescue StandardError => error
   p error
