@@ -74,7 +74,8 @@ end
 def run_cleanup(r, index)
   found = safe_go_to_profile(r, nil, true)
   update_email(r) if found
-  new_email = $change_email_allowed ? r[DESIRED_EMAIL_COLUMN_INDEX] : nil
+  new_email = nil
+  new_email = r[DESIRED_EMAIL_COLUMN_INDEX] if $change_email_allowed
 
   go_to_profile(r, new_email)
   update_name(r)
@@ -178,7 +179,7 @@ def update_email(row)
 
   @browser.find_element(css: '[name="_eventId_save"]').click
   # wait for page to save
-  sleep 0.1
+  sleep 1
   wait_for(css: '.card-header')
 end
 
@@ -239,25 +240,18 @@ def group_name(row)
 end
 
 def add_aliases(row)
-  aliases = row[ALIAS_COLUMN_INDEX].to_s.strip.split(',').map(&:strip)
-  return unless aliases.any?
+  aliases = row[ALIAS_COLUMN_INDEX].to_s.downcase
+  return unless aliases.strip.length > 0
 
   @browser.find_element(css: '.select2-selection').click
-  aliases.each do |a|
-    add_alias(a)
-  end
+  @browser.find_element(css: '.select2-search--inline input').send_keys(aliases)
+  sleep(0.1)
 
   return if $dry_run
   @browser.find_element(css: '[name="_eventId_save"]').click
   # wait for page to save
   sleep 0.1
   wait_for(css: '.card-header')
-end
-
-def add_alias(a)
-  @browser.find_element(css: '.select2-search--inline input').send_keys(a)
-  @browser.find_element(css: '.select2-results__option--highlighted').click
-  sleep(0.1)
 end
 
 def save_note(row_number, text)
