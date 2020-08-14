@@ -7,5 +7,6 @@ def wait_for(search)
 end
 
 def char_to_col_index(char)
+  return char if char.is_a? Numeric
   char.upcase.ord - 65
 end

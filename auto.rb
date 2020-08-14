@@ -1,30 +1,39 @@
 require 'selenium-webdriver'
 require 'google_drive'
 require 'pry-byebug'
+require 'yaml'
 
-CAS_MANAGE_SEARCH_PAGE = 'https://thekey.me/cas-management/users/admin'
 LOGIN_HELPER_FILE = '~/key_login.rb'
-SPREADSHEET_KEY = "1uYK_WjqDnQi4l-ldRUbF-yXhNw3Ok6uYuztJBuriWnk"
-SHEET_INDEX = 1
-G_GROUP_NAME = 'WA/Ghana'
-
-# use the actual row numbers (the first row is 1, not 0)
-START_ROW_NUMBER = ENV['START_ROW_NUMBER']&.to_i || 3
-END_ROW_NUMBER = ENV['END_ROW_NUMBER']&.to_i || 4
-
-EXISTING_EMAIL_COLUMN_INDEX=10
-DESIRED_EMAIL_COLUMN_INDEX=2
-FIRST_NAME_COLUMN_INDEX=4
-PREFERRED_NAME_COLUMN_INDEX=7
-LAST_NAME_COLUMN_INDEX=5
-PASSWORD_COLUMN_INDEX=3
-
 def login(_browser); end
 if File.file?(File.expand_path LOGIN_HELPER_FILE)
   require LOGIN_HELPER_FILE
 end
 
 require_relative 'helpers.rb'
+
+CONFIG = YAML.load_file("config.yml")
+puts CONFIG
+raise 'No config given' if CONFIG == false || CONFIG.keys.none?
+
+CAS_MANAGE_SEARCH_PAGE = 'https://thekey.me/cas-management/users/admin'
+SPREADSHEET_KEY = CONFIG['spreadsheet']['key']
+SHEET_INDEX = CONFIG['spreadsheet']['index']
+G_GROUP_NAME = CONFIG['g_group_name']
+
+# use the actual row numbers (the first row is 1, not 0)
+START_ROW_NUMBER = ENV['START_ROW_NUMBER']&.to_i || CONFIG['start_row_number']
+END_ROW_NUMBER = ENV['END_ROW_NUMBER']&.to_i || CONFIG['end_row_number']
+# example to run this on specific rows:
+# START_ROW_NUMBER=260 END_ROW_NUMBER=387 PROFILE_NUMBER=2 ruby auto.rb
+
+EXISTING_EMAIL_COLUMN_INDEX= char_to_col_index CONFIG['existing_email_column_index']
+DESIRED_EMAIL_COLUMN_INDEX= char_to_col_index CONFIG['desired_email_column_index']
+FIRST_NAME_COLUMN_INDEX= char_to_col_index CONFIG['first_name_column_index']
+PREFERRED_NAME_COLUMN_INDEX= char_to_col_index CONFIG['preferred_name_column_index']
+LAST_NAME_COLUMN_INDEX= char_to_col_index CONFIG['last_name_column_index']
+PASSWORD_COLUMN_INDEX= char_to_col_index CONFIG['password_column_index']
+NOTE_COLUMN_INDEX= char_to_col_index CONFIG['note_column_index']
+ALIAS_COLUMN_INDEX= char_to_col_index CONFIG['alias_column_index']
 
 $change_email_allowed = false
 $dry_run = true
