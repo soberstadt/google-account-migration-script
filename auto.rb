@@ -88,13 +88,11 @@ def run_cleanup(r, index)
   new_email = r[DESIRED_EMAIL_COLUMN_INDEX] if $change_email_allowed
 
   update_name(r)
+  set_password(r)
 
   go_to_profile(r, new_email)
   reset_mfa
 
-  set_password(r)
-
-  go_to_profile(r, new_email)
   change_group(r)
 
   if ALIAS_COLUMN_INDEX
@@ -181,14 +179,10 @@ end
 
 # done
 def set_password(row)
-  @browser.find_element(css: '[data-target="#changePasswordCollapsible"]').click
-  @browser.find_element(id: 'password').clear
-  @browser.find_element(id: 'password').send_keys(row[PASSWORD_COLUMN_INDEX])
-
+  print ", password"
   return if $dry_run
-  @browser.find_element(css: '[name="_eventId_updatePassword"]').click
-  # wait a half second for page to save
-  sleep 0.5
+
+  okta_client.update_profile(okta_email(row), credentials: { password: { value: row[PASSWORD_COLUMN_INDEX] } })
 end
 
 # done
