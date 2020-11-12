@@ -87,7 +87,6 @@ def run_cleanup(r, index)
   new_email = nil
   new_email = r[DESIRED_EMAIL_COLUMN_INDEX] if $change_email_allowed
 
-  go_to_profile(r, new_email)
   update_name(r)
 
   go_to_profile(r, new_email)
@@ -99,8 +98,7 @@ def run_cleanup(r, index)
   change_group(r)
 
   if ALIAS_COLUMN_INDEX
-    go_to_profile(r, new_email)
-    add_aliases(r) # currently does nothing
+    add_aliases(r)
   end
 
   save_note(index + START_ROW_NUMBER, 'success')
@@ -160,22 +158,10 @@ def update_name(row)
   preferred_name = PREFERRED_NAME_COLUMN_INDEX ? row[PREFERRED_NAME_COLUMN_INDEX] : ''
   last_name = row[LAST_NAME_COLUMN_INDEX]
 
-  @browser.find_element(id: 'firstName').clear
-  @browser.find_element(id: 'firstName').send_keys(first_name)
-
-  if preferred_name != ''
-    @browser.find_element(id: 'preferredName').clear
-    @browser.find_element(id: 'preferredName').send_keys(preferred_name)
-  end
-
-  @browser.find_element(id: 'lastName').clear
-  @browser.find_element(id: 'lastName').send_keys(last_name)
-
   return if $dry_run
-  @browser.find_element(css: '[name="_eventId_save"]').click
-  # wait for page to save
-  sleep 0.1
-  wait_for(css: '.card-header')
+
+  new_profile_attributes = { firstName: first_name, nickName: preferred_name, lastName: last_name }
+  okta_client.update_profile(okta_email(row), profile: new_profile_attributes)
 end
 
 # done
@@ -253,13 +239,12 @@ def add_aliases(row)
   aliases = row[ALIAS_COLUMN_INDEX].to_s.downcase.strip
   return unless aliases.length > 0
 
-  okta_email = $change_email_allowed ? r[DESIRED_EMAIL_COLUMN_INDEX] : r[EXISTING_EMAIL_COLUMN_INDEX]
   # https://developer.okta.com/docs/reference/api/users/#get-user-with-login
-  response, _http_status = okta_client.get_user(okta_email)
+  response, _http_status = okta_client.get_user(okta_email(row))
   existing_aliases = response[:profile][:emailAliases]
   combined_aliases = (existing_aliases + aliases.split(',').map(&:strip)).uniq
 
-  okta_client.update_profile(okta_email, profile: { emailAliases: combined_aliases })
+  okta_client.update_profile(okta_email(row), profile: { emailAliases: combined_aliases })
 end
 
 def save_note(row_number, text)
@@ -271,6 +256,10 @@ def run
   connect_to_drive_file
   setup_browser
   loop_over_rows
+end
+
+def okta_email(row)
+  $change_email_allowed ? row[DESIRED_EMAIL_COLUMN_INDEX] : row[EXISTING_EMAIL_COLUMN_INDEX]
 end
 
 def okta_client
