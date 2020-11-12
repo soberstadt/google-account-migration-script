@@ -2,6 +2,7 @@ require 'selenium-webdriver'
 require 'google_drive'
 require 'pry-byebug'
 require 'yaml'
+require 'oktakit'
 
 LOGIN_HELPER_FILE = '~/key_login.rb'
 def login(_browser); end
@@ -249,18 +250,16 @@ def group_name(row)
 end
 
 def add_aliases(row)
-  aliases = row[ALIAS_COLUMN_INDEX].to_s.downcase
-  return unless aliases.strip.length > 0
+  aliases = row[ALIAS_COLUMN_INDEX].to_s.downcase.strip
+  return unless aliases.length > 0
 
-  @browser.find_element(css: '.select2-selection').click
-  @browser.find_element(css: '.select2-search--inline input').send_keys(aliases)
-  sleep(0.1)
+  okta_email = $change_email_allowed ? r[DESIRED_EMAIL_COLUMN_INDEX] : r[EXISTING_EMAIL_COLUMN_INDEX]
+  # https://developer.okta.com/docs/reference/api/users/#get-user-with-login
+  response, _http_status = okta_client.get_user(okta_email)
+  existing_aliases = response[:profile][:emailAliases]
+  combined_aliases = (existing_aliases + aliases.split(',').map(&:strip)).uniq
 
-  return if $dry_run
-  @browser.find_element(css: '[name="_eventId_save"]').click
-  # wait for page to save
-  sleep 0.1
-  wait_for(css: '.card-header')
+  okta_client.update_profile(okta_email, profile: { emailAliases: combined_aliases })
 end
 
 def save_note(row_number, text)
@@ -272,6 +271,10 @@ def run
   connect_to_drive_file
   setup_browser
   loop_over_rows
+end
+
+def okta_client
+  @okta_client ||= Oktakit.new(token: CONFIG['okta_token'], api_endpoint: CONFIG['okta_api_endpoint'])
 end
 
 begin

@@ -3,6 +3,7 @@ GEM
   specs:
     addressable (2.7.0)
       public_suffix (>= 2.0.2, < 5.0)
+    amazing_print (1.2.2)
     byebug (11.1.1)
     childprocess (3.0.0)
     coderay (1.1.2)
@@ -40,6 +41,8 @@ GEM
     multipart-post (2.1.1)
     nokogiri (1.10.7)
       mini_portile2 (~> 2.4.0)
+    oktakit (0.2.0)
+      sawyer (~> 0.8.1)
     os (1.0.1)
     pry (0.12.2)
       coderay (~> 1.1.0)
@@ -54,6 +57,9 @@ GEM
       uber (< 0.2.0)
     retriable (3.1.2)
     rubyzip (2.0.0)
+    sawyer (0.8.2)
+      addressable (>= 2.3.5)
+      faraday (> 0.8, < 2.0)
     selenium-webdriver (3.142.7)
       childprocess (>= 0.5, < 4.0)
       rubyzip (>= 1.2.2)
@@ -69,8 +75,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  amazing_print
   google_drive
   irb
+  oktakit
   pry-byebug
   selenium-webdriver
   yaml
