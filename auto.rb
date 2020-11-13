@@ -44,7 +44,7 @@ def setup_browser
   options = Selenium::WebDriver::Chrome::Options.new
   options.add_argument(user_data_dir)
   @browser = Selenium::WebDriver.for :chrome, options: options
-  @browser.navigate.to "https://thekey.me/cas-management/users/admin"
+  @browser.navigate.to CAS_MANAGE_SEARCH_PAGE
 
   login(@browser)
 
@@ -82,14 +82,16 @@ end
 # 5 Search on "C" then change then change Google Organization, (wait)
 # 6 Search on "C" then change aliases
 def run_cleanup(r, index)
-  found = safe_go_to_profile(r, nil, true)
-  update_email(r) if found
+  return if r[NOTE_COLUMN_INDEX] == 'success'
+  puts ''
+  print "#{index + START_ROW_NUMBER}: "
+  update_email_and_name(r)
   new_email = nil
   new_email = r[DESIRED_EMAIL_COLUMN_INDEX] if $change_email_allowed
 
-  update_name(r)
   set_password(r)
 
+  sleep 1
   go_to_profile(r, new_email)
   reset_mfa
 
@@ -99,7 +101,8 @@ def run_cleanup(r, index)
     add_aliases(r)
   end
 
-  save_note(index + START_ROW_NUMBER, 'success')
+  success_message = $dry_run ? 'dry run success' : 'success'
+  save_note(index + START_ROW_NUMBER, success_message)
 rescue => error
   save_note(index + START_ROW_NUMBER, error.message)
 end
@@ -150,34 +153,37 @@ def check_for_multiple_results
   end
 end
 
-# done
-def update_name(row)
-  first_name = row[FIRST_NAME_COLUMN_INDEX]
-  preferred_name = PREFERRED_NAME_COLUMN_INDEX ? row[PREFERRED_NAME_COLUMN_INDEX] : ''
-  last_name = row[LAST_NAME_COLUMN_INDEX]
+def update_email_and_name(row)
+  new_profile_attributes = {
+    firstName: row[FIRST_NAME_COLUMN_INDEX],
+    lastName: row[LAST_NAME_COLUMN_INDEX]
+  }
+  new_profile_attributes[:nickName] = row[PREFERRED_NAME_COLUMN_INDEX].to_s if PREFERRED_NAME_COLUMN_INDEX
 
+  existing_email = row[EXISTING_EMAIL_COLUMN_INDEX]
+  found_email = nil
+  if $change_email_allowed
+    new_email = okta_email(row)
+    profile = begin
+        okta_profile(existing_email)
+        found_email = existing_email
+      rescue Oktakit::NotFound
+        nil
+      end
+    profile ||= okta_profile(new_email)
+    found_email ||= new_email
+
+    if profile[:login] != new_email || profile[:email] != new_email
+      new_profile_attributes[:login] = new_email
+      new_profile_attributes[:email] = new_email
+    end
+  end
+
+  puts "I would have updated #{existing_email} with: #{new_profile_attributes}" if $dry_run
   return if $dry_run
-
-  new_profile_attributes = { firstName: first_name, nickName: preferred_name, lastName: last_name }
-  okta_client.update_profile(okta_email(row), profile: new_profile_attributes)
+  okta_client.update_profile(found_email, profile: new_profile_attributes)
 end
 
-# done
-def update_email(row)
-  return unless $change_email_allowed
-
-  @browser.find_element(id: 'email').clear
-  @browser.find_element(id: 'email').send_keys(row[DESIRED_EMAIL_COLUMN_INDEX])
-
-  return if $dry_run
-
-  @browser.find_element(css: '[name="_eventId_save"]').click
-  # wait for page to save
-  sleep 1
-  wait_for(css: '.card-header')
-end
-
-# done
 def set_password(row)
   print ", password"
   return if $dry_run
@@ -233,9 +239,7 @@ def add_aliases(row)
   aliases = row[ALIAS_COLUMN_INDEX].to_s.downcase.strip
   return unless aliases.length > 0
 
-  # https://developer.okta.com/docs/reference/api/users/#get-user-with-login
-  response, _http_status = okta_client.get_user(okta_email(row))
-  existing_aliases = response[:profile][:emailAliases]
+  existing_aliases = okta_profile(okta_email(row)[:emailAliases]
   combined_aliases = (existing_aliases + aliases.split(',').map(&:strip)).uniq
 
   okta_client.update_profile(okta_email(row), profile: { emailAliases: combined_aliases })
@@ -258,6 +262,12 @@ end
 
 def okta_client
   @okta_client ||= Oktakit.new(token: CONFIG['okta_token'], api_endpoint: CONFIG['okta_api_endpoint'])
+end
+
+def okta_profile(email)
+  # https://developer.okta.com/docs/reference/api/users/#get-user-with-login
+  response, _http_status = okta_client.get_user(email)
+  response[:profile]
 end
 
 begin
