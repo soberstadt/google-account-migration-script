@@ -82,6 +82,7 @@ end
 # 5 Search on "C" then change then change Google Organization, (wait)
 # 6 Search on "C" then change aliases
 def run_cleanup(r, index)
+  @okta_user = nil
   return if r[NOTE_COLUMN_INDEX] == 'success'
   puts ''
   print "#{index + START_ROW_NUMBER}: "
@@ -105,13 +106,6 @@ def run_cleanup(r, index)
   save_note(index + START_ROW_NUMBER, success_message)
 rescue => error
   save_note(index + START_ROW_NUMBER, error.message)
-end
-
-def safe_go_to_profile(r, email = nil, reload = false)
-  go_to_profile(r, email, reload)
-rescue => error
-  raise error unless error.message == "person not found"
-  nil
 end
 
 # done
@@ -207,23 +201,19 @@ def reset_mfa
 end
 
 def change_group(row)
-  return if [nil, ''].include? group_name(row)
+  return if group_name(row).to_s == ''
 
-  sleep 1
-  @browser.find_element(css: '[data-target="#googleGroupsCollapsible"]').click
-  sleep 1
+  okta_group_id = find_group_id(group_name(row))
+  okta_user_id = okta_user(okta_email(row), true)[:id]
 
-  xpath_selector = "//*[text() = '#{group_name(row)}']"
-  group_select = @browser.find_elements(xpath: xpath_selector).first
-  raise 'google group not found' unless group_select
-  group_select.click
+  puts "I would have added #{okta_user_id} to group #{okta_group_id}" and return if $dry_run
+  okta_client.add_user_to_group(okta_group_id, okta_user_id)
+end
 
-  sleep 0.5
-
-  return if $dry_run
-  @browser.find_element(css: '[name="_eventId_updateGoogleGroup"]').click
-  # wait a half second for page to save
-  sleep 0.5
+def find_group_id(group_name)
+  resp, _code = okta_client.list_groups(query: { q: group_name, limit: 1 })
+  raise "group name doesn't match exactly" unless resp.first[:profile][:name] == group_name
+  resp.first[:id]
 end
 
 def group_name(row)
@@ -264,10 +254,15 @@ def okta_client
   @okta_client ||= Oktakit.new(token: CONFIG['okta_token'], api_endpoint: CONFIG['okta_api_endpoint'])
 end
 
-def okta_profile(email)
+def okta_user(email, use_cache = false)
+  return @okta_user if @okta_user && use_cache
   # https://developer.okta.com/docs/reference/api/users/#get-user-with-login
   response, _http_status = okta_client.get_user(email)
-  response[:profile]
+  @okta_user = response
+end
+
+def okta_profile(email, use_cache = false)
+  okta_user(email, use_cache)[:profile]
 end
 
 begin
