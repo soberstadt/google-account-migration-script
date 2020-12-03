@@ -94,7 +94,9 @@ def run_cleanup(r, index)
 
   sleep 1
   go_to_profile(r, new_email)
-  reset_mfa
+  reset_the_key_mfa
+
+  reset_okta_mfa(r)
 
   change_group(r)
 
@@ -186,18 +188,24 @@ def set_password(row)
 end
 
 # done
-def reset_mfa
+def reset_the_key_mfa
   @browser.find_element(css: '[data-target="#mfaCollapsible"]').click
 
   mfa_enabled = @browser.find_elements(css: '[name="_eventId_resetMfaSecret"]').count > 0
   return unless mfa_enabled
-
 
   return if $dry_run
   sleep 0.5
   @browser.find_element(css: '[name="_eventId_resetMfaSecret"]').click
   # wait a half second for page to save
   sleep 0.5
+end
+
+def reset_okta_mfa(row)
+  return if $dry_run
+
+  okta_user_id = okta_user(okta_email(row), true)[:id]
+  okta_client.reset_factors(okta_user_id)
 end
 
 def change_group(row)
