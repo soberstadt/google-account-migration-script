@@ -185,6 +185,8 @@ def set_password(row)
   return if $dry_run
 
   okta_client.update_profile(okta_email(row), credentials: { password: { value: row[PASSWORD_COLUMN_INDEX] } })
+  okta_user_id = okta_user(okta_email(row), true)[:id]
+  okta_client.expire_password(okta_user_id)
 end
 
 # done
