@@ -107,6 +107,7 @@ def run_cleanup(r, index)
   success_message = $dry_run ? 'dry run success' : 'success'
   save_note(index + START_ROW_NUMBER, success_message)
 rescue => error
+  puts error.backtrace
   save_note(index + START_ROW_NUMBER, error.message)
 end
 
@@ -161,8 +162,9 @@ def update_email_and_name(row)
   if $change_email_allowed
     new_email = okta_email(row)
     profile = begin
-        okta_profile(existing_email)
+        existing = okta_profile(existing_email)
         found_email = existing_email
+        existing
       rescue Oktakit::NotFound
         nil
       end
@@ -239,8 +241,9 @@ def add_aliases(row)
   aliases = row[ALIAS_COLUMN_INDEX].to_s.downcase.strip
   return unless aliases.length > 0
 
-  existing_aliases = okta_profile(okta_email(row)[:emailAliases]
-  combined_aliases = (existing_aliases + aliases.split(',').map(&:strip)).uniq
+  existing_aliases = okta_profile(okta_email(row))[:emailAliases] || []
+  new_aliases = aliases.split(" ")
+  combined_aliases = (existing_aliases + new_aliases.map(&:strip)).uniq
 
   okta_client.update_profile(okta_email(row), profile: { emailAliases: combined_aliases })
 end
